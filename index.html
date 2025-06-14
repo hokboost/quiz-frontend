@@ -35,16 +35,26 @@
       color: green;
       word-break: break-word;
     }
+    #leaderboard {
+      margin-top: 40px;
+      font-size: 18px;
+    }
   </style>
 </head>
 <body>
   <h1>🧠 KingBoost 在线答题</h1>
-  <div id="quiz">
+  <div id="user-section">
+    <p>请输入你的用户名：</p>
+    <input type="text" id="username" placeholder="用户名" />
+    <button onclick="startQuiz()">开始答题</button>
+  </div>
+  <div id="quiz" style="display:none">
     <p id="timer"></p>
     <div id="question"></div>
     <div id="options"></div>
   </div>
   <div id="result"></div>
+  <div id="leaderboard"></div>
 
   <script>
     const SERVER = "https://quiz-server-xbm0.onrender.com";
@@ -52,6 +62,7 @@
     let questions = [];
     let userAnswers = [];
     let timerId;
+    let username = "";
 
     const timestamp = Math.floor(Date.now() / 1000);
     const nonce = crypto.randomUUID();
@@ -66,24 +77,29 @@
     }
 
     function startQuiz() {
+      const input = document.getElementById("username");
+      if (!input.value.trim()) {
+        alert("请先输入用户名！");
+        return;
+      }
+      username = input.value.trim();
+      document.getElementById("user-section").style.display = "none";
+
       fetch(`${SERVER}/quiz`)
         .then(res => res.json())
         .then(data => {
           const raw = data.questions;
-          shuffle(raw); // 打乱题目顺序
-
-          // ✅ 正确记录正确答案，再打乱选项
+          shuffle(raw);
           questions = raw.map(q => {
-            const correctText = q.options[q.answer];     // 先记录正确答案
-            const options = shuffle([...q.options]);     // 再打乱选项
+            const correctText = q.options[q.answer];
+            const options = shuffle([...q.options]);
             return {
               id: q.id,
               question: q.question,
-              options: options,
-              correct: correctText                       // 永远是真实正确答案文本
+              options,
+              correct: correctText
             };
           });
-
           showQuestion();
         });
     }
@@ -93,29 +109,23 @@
         submitAnswers();
         return;
       }
-
       const q = questions[current];
+      document.getElementById("quiz").style.display = "block";
       document.getElementById("question").textContent = `题目 ${current + 1}：${q.question}`;
       const opts = document.getElementById("options");
       opts.innerHTML = "";
-
       q.options.forEach((opt) => {
         const div = document.createElement("div");
         div.className = "option";
         div.textContent = opt;
         div.onclick = () => {
           clearInterval(timerId);
-          userAnswers.push({
-            id: q.id,
-            answerText: opt,
-            correctText: q.correct // ✅ 提交正确答案用于比对
-          });
+          userAnswers.push({ id: q.id, answerText: opt, correctText: q.correct });
           current++;
           showQuestion();
         };
         opts.appendChild(div);
       });
-
       startTimer();
     }
 
@@ -143,6 +153,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          username,
           answers: userAnswers,
           timestamp,
           nonce,
@@ -157,6 +168,7 @@
             resultDiv.innerHTML =
               `✅ 答题结束！你的得分：<b>${result.score}/${result.total}</b><br><br>` +
               `验证签名（供后台或领奖使用）：<br><code>${result.proof}</code>`;
+            loadLeaderboard();
           } else {
             resultDiv.textContent = `提交失败：${result.message}`;
           }
@@ -167,7 +179,19 @@
         });
     }
 
-    startQuiz();
+    function loadLeaderboard() {
+      fetch(`${SERVER}/quiz/leaderboard`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.records) {
+            const board = document.getElementById("leaderboard");
+            board.innerHTML = `<h2>📅 今日排行榜</h2>` +
+              `<ol>` +
+              data.records.map(r => `<li>${r.username} - ${r.score}/${r.total}</li>`).join("") +
+              `</ol>`;
+          }
+        });
+    }
   </script>
 </body>
 </html>
