@@ -39,6 +39,15 @@
       margin-top: 40px;
       font-size: 18px;
     }
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      width: 80%;
+    }
+    table th, table td {
+      border: 1px solid #ccc;
+      padding: 8px;
+    }
   </style>
 </head>
 <body>
@@ -54,7 +63,15 @@
     <div id="options"></div>
   </div>
   <div id="result"></div>
-  <div id="leaderboard"></div>
+  <div id="leaderboard" style="display: none;">
+    <h2>🏆 今日排行榜</h2>
+    <table>
+      <thead>
+        <tr><th>排名</th><th>用户名</th><th>得分</th><th>时间</th></tr>
+      </thead>
+      <tbody id="leaderboard-body"></tbody>
+    </table>
+  </div>
 
   <script>
     const SERVER = "https://quiz-server-xbm0.onrender.com";
@@ -184,15 +201,19 @@
         .then(res => res.json())
         .then(data => {
           if (data.success && data.records) {
-            const board = document.getElementById("leaderboard");
-            board.innerHTML = `<h2>📅 今日排行榜</h2>` +
-              `<ol>` +
-              data.records.map(r => `<li>${r.username} - ${r.score}/${r.total}</li>`).join("") +
-              `</ol>`;
+            const body = document.getElementById("leaderboard-body");
+            body.innerHTML = "";
+            data.records.forEach((r, i) => {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `<td>${i + 1}</td><td>${r.username}</td><td>${r.score}</td><td>${r.time}</td>`;
+              body.appendChild(tr);
+            });
+            document.getElementById("leaderboard").style.display = "block";
           }
         });
     }
   </script>
 </body>
 </html>
+
 
