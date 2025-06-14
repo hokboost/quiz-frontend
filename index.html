@@ -72,14 +72,15 @@
           const raw = data.questions;
           shuffle(raw); // 打乱题目顺序
 
-          // 记录每题的正确答案文本 + 乱序选项
+          // ✅ 正确记录正确答案，再打乱选项
           questions = raw.map(q => {
-            const options = shuffle([...q.options]);
+            const correctText = q.options[q.answer];     // 先记录正确答案
+            const options = shuffle([...q.options]);     // 再打乱选项
             return {
               id: q.id,
               question: q.question,
               options: options,
-              correct: q.options[q.answer] // ✅ 记录正确答案的文本
+              correct: correctText                       // 永远是真实正确答案文本
             };
           });
 
@@ -107,7 +108,7 @@
           userAnswers.push({
             id: q.id,
             answerText: opt,
-            correctText: q.correct // ✅ 提交正确答案的文本供后端比对
+            correctText: q.correct // ✅ 提交正确答案用于比对
           });
           current++;
           showQuestion();
