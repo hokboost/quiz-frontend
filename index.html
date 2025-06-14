@@ -1,1 +1,107 @@
-(index.html 内容)
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>在线答题 - KingBoost Quiz</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 30px;
+    }
+    #question {
+      font-size: 20px;
+      margin: 20px 0;
+    }
+    .option {
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      width: 60%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .option:hover {
+      background-color: #f0f0f0;
+    }
+    #timer {
+      font-size: 18px;
+      color: red;
+    }
+    #result {
+      margin-top: 30px;
+      font-size: 22px;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧠 KingBoost 在线答题</h1>
+  <div id="quiz">
+    <p id="timer"></p>
+    <div id="question"></div>
+    <div id="options"></div>
+  </div>
+  <div id="result"></div>
+
+  <script>
+    let current = 0;
+    let questions = [];
+    let score = 0;
+    let timerId;
+
+    function startQuiz() {
+      fetch("https://quiz-server-xbm0.onrender.com/api/quiz")
+        .then(res => res.json())
+        .then(data => {
+          questions = data;
+          showQuestion();
+        });
+    }
+
+    function showQuestion() {
+      if (current >= questions.length) {
+        document.getElementById("quiz").style.display = "none";
+        document.getElementById("result").textContent = `答题结束！你的得分：${score}/${questions.length}`;
+        return;
+      }
+
+      const q = questions[current];
+      document.getElementById("question").textContent = `题目 ${current + 1}：${q.question}`;
+      const opts = document.getElementById("options");
+      opts.innerHTML = "";
+      q.options.forEach((opt, i) => {
+        const div = document.createElement("div");
+        div.className = "option";
+        div.textContent = opt;
+        div.onclick = () => {
+          clearInterval(timerId);
+          if (opt === q.answer) score++;
+          current++;
+          showQuestion();
+        };
+        opts.appendChild(div);
+      });
+
+      startTimer();
+    }
+
+    function startTimer() {
+      let t = 30;
+      document.getElementById("timer").textContent = `倒计时：${t} 秒`;
+      timerId = setInterval(() => {
+        t--;
+        document.getElementById("timer").textContent = `倒计时：${t} 秒`;
+        if (t <= 0) {
+          clearInterval(timerId);
+          current++;
+          showQuestion();
+        }
+      }, 1000);
+    }
+
+    startQuiz();
+  </script>
+</body>
+</html>
