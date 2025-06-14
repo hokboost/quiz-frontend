@@ -44,13 +44,19 @@
   <div id="result"></div>
 
   <script>
+    const SERVER = "https://quiz-server-xbm0.onrender.com";
     let current = 0;
     let questions = [];
     let userAnswers = [];
     let timerId;
 
+    // secure session vars
+    const timestamp = Math.floor(Date.now() / 1000);
+    const nonce = crypto.randomUUID();
+    const userId = Math.floor(Math.random() * 1000000); // Random client-side user ID for demo
+
     function startQuiz() {
-      fetch("https://quiz-server-xbm0.onrender.com/quiz")
+      fetch(`${SERVER}/quiz`)
         .then(res => res.json())
         .then(data => {
           questions = data.questions;
@@ -100,18 +106,22 @@
     }
 
     function submitAnswers() {
-      fetch("https://quiz-server-xbm0.onrender.com/quiz/submit", {
+      fetch(`${SERVER}/quiz/submit`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ answers: userAnswers })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answers: userAnswers,
+          timestamp,
+          nonce,
+          userId
+        })
       })
         .then(res => res.json())
         .then(result => {
           document.getElementById("quiz").style.display = "none";
-          document.getElementById("result").textContent =
-            `答题结束！你的得分：${result.score}/${result.total}`;
+          document.getElementById("result").innerHTML =
+            `✅ 答题结束！你的得分：<b>${result.score}/${result.total}</b><br><br>` +
+            `验证签名（供后台或领奖使用）:<br><code>${result.proof}</code>`;
         });
     }
 
