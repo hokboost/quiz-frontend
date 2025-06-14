@@ -46,7 +46,7 @@
   <script>
     let current = 0;
     let questions = [];
-    let score = 0;
+    let userAnswers = [];
     let timerId;
 
     function startQuiz() {
@@ -60,8 +60,7 @@
 
     function showQuestion() {
       if (current >= questions.length) {
-        document.getElementById("quiz").style.display = "none";
-        document.getElementById("result").textContent = `答题结束！你的得分：${score}/${questions.length}`;
+        submitAnswers();
         return;
       }
 
@@ -75,7 +74,7 @@
         div.textContent = opt;
         div.onclick = () => {
           clearInterval(timerId);
-          if (i === q.answer) score++;
+          userAnswers.push({ id: q.id, answer: i });
           current++;
           showQuestion();
         };
@@ -93,14 +92,30 @@
         document.getElementById("timer").textContent = `倒计时：${t} 秒`;
         if (t <= 0) {
           clearInterval(timerId);
+          userAnswers.push({ id: questions[current].id, answer: -1 }); // 超时未作答
           current++;
           showQuestion();
         }
       }, 1000);
     }
 
+    function submitAnswers() {
+      fetch("https://quiz-server-xbm0.onrender.com/quiz/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ answers: userAnswers })
+      })
+        .then(res => res.json())
+        .then(result => {
+          document.getElementById("quiz").style.display = "none";
+          document.getElementById("result").textContent =
+            `答题结束！你的得分：${result.score}/${result.total}`;
+        });
+    }
+
     startQuiz();
   </script>
 </body>
 </html>
-
