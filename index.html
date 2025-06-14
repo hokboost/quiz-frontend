@@ -55,7 +55,7 @@
 
     const timestamp = Math.floor(Date.now() / 1000);
     const nonce = crypto.randomUUID();
-    const userId = Math.floor(Math.random() * 1e6); // demo 用 userId，可替换为登录ID
+    const userId = Math.floor(Math.random() * 1e6);
 
     function shuffle(array) {
       for (let i = array.length - 1; i > 0; i--) {
@@ -70,15 +70,16 @@
         .then(res => res.json())
         .then(data => {
           const raw = data.questions;
-          shuffle(raw); // 随机题目顺序
+          shuffle(raw); // 打乱题目顺序
 
-          // 随机每题选项，并记录
+          // 记录每题的正确答案文本 + 乱序选项
           questions = raw.map(q => {
             const options = shuffle([...q.options]);
             return {
               id: q.id,
               question: q.question,
-              options
+              options: options,
+              correct: q.options[q.answer] // ✅ 记录正确答案的文本
             };
           });
 
@@ -103,7 +104,11 @@
         div.textContent = opt;
         div.onclick = () => {
           clearInterval(timerId);
-          userAnswers.push({ id: q.id, answerText: opt }); // ✅ 保存选项文本
+          userAnswers.push({
+            id: q.id,
+            answerText: opt,
+            correctText: q.correct // ✅ 提交正确答案的文本供后端比对
+          });
           current++;
           showQuestion();
         };
@@ -121,7 +126,11 @@
         document.getElementById("timer").textContent = `倒计时：${t} 秒`;
         if (t <= 0) {
           clearInterval(timerId);
-          userAnswers.push({ id: questions[current].id, answerText: null }); // 超时未作答
+          userAnswers.push({
+            id: questions[current].id,
+            answerText: null,
+            correctText: questions[current].correct
+          });
           current++;
           showQuestion();
         }
