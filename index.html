@@ -197,21 +197,22 @@
     }
 
     function loadLeaderboard() {
-      fetch(`${SERVER}/quiz/leaderboard`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.records) {
-            const body = document.getElementById("leaderboard-body");
-            body.innerHTML = "";
-            data.records.forEach((r, i) => {
-              const tr = document.createElement("tr");
-              tr.innerHTML = `<td>${i + 1}</td><td>${r.username}</td><td>${r.score}</td><td>${r.time}</td>`;
-              body.appendChild(tr);
-            });
-            document.getElementById("leaderboard").style.display = "block";
-          }
-        });
-    }
+  fetch(`${SERVER}/quiz/leaderboard`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.leaderboard) {
+        const board = document.getElementById("leaderboard");
+        board.innerHTML = `<h2>📅 今日排行榜</h2>` +
+          `<ol>` +
+          data.leaderboard.map(r => {
+            const time = new Date(r.submitted_at).toLocaleTimeString('zh-CN', { hour12: false });
+            return `<li>${r.username} - ${r.score}/5 - ${time}</li>`;
+          }).join("") +
+          `</ol>`;
+      }
+    });
+}
+
   </script>
 </body>
 </html>
