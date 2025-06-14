@@ -38,6 +38,7 @@
     #leaderboard {
       margin-top: 40px;
       font-size: 18px;
+      display: none;
     }
     table {
       margin: 0 auto;
@@ -63,7 +64,7 @@
     <div id="options"></div>
   </div>
   <div id="result"></div>
-  <div id="leaderboard" style="display: none;">
+  <div id="leaderboard">
     <h2>🏆 今日排行榜</h2>
     <table>
       <thead>
@@ -197,22 +198,28 @@
     }
 
     function loadLeaderboard() {
-  fetch(`${SERVER}/quiz/leaderboard`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.success && data.leaderboard) {
-        const board = document.getElementById("leaderboard");
-        board.innerHTML = `<h2>📅 今日排行榜</h2>` +
-          `<ol>` +
-          data.leaderboard.map(r => {
-            const time = new Date(r.submitted_at).toLocaleTimeString('zh-CN', { hour12: false });
-            return `<li>${r.username} - ${r.score}/5 - ${time}</li>`;
-          }).join("") +
-          `</ol>`;
-      }
-    });
-}
+      fetch(`${SERVER}/quiz/leaderboard`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && Array.isArray(data.leaderboard)) {
+            const board = document.getElementById("leaderboard");
+            const tbody = document.getElementById("leaderboard-body");
+            board.style.display = "block";
+            tbody.innerHTML = "";
 
+            data.leaderboard.forEach((r, i) => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                <td>${i + 1}</td>
+                <td>${r.username}</td>
+                <td>${r.score}</td>
+                <td>${new Date(r.submitted_at).toLocaleTimeString('zh-CN', { hour12: false })}</td>
+              `;
+              tbody.appendChild(row);
+            });
+          }
+        });
+    }
   </script>
 </body>
 </html>
