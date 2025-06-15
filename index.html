@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>🧠 KingBoost 在线答题</title>
+  <title>🧐 KingBoost 在线答题</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -52,7 +52,7 @@
   </style>
 </head>
 <body>
-  <h1>🧠 KingBoost 在线答题</h1>
+  <h1>🧐 KingBoost 在线答题</h1>
   <div id="user-section">
     <p>请输入你的用户名：</p>
     <input type="text" id="username" placeholder="用户名" />
@@ -76,147 +76,145 @@
 
   <script>
     const SERVER = "https://quiz-server-xbm0.onrender.com";
-let current = 0;
-let questions = [];
-let userAnswers = [];
-let timerId;
-let totalTime = 30;
-let username = "";
+    let current = 0;
+    let questions = [];
+    let userAnswers = [];
+    let timerId;
+    let totalTime = 30;
+    let username = "";
 
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-}
-
-function startQuiz() {
-  const input = document.getElementById("username");
-  if (!input.value.trim()) {
-    alert("请先输入用户名！");
-    return;
-  }
-  username = input.value.trim();
-  document.getElementById("user-section").style.display = "none";
-
-  fetch(`${SERVER}/quiz`)
-    .then(res => res.json())
-    .then(data => {
-      const raw = data.questions;
-      shuffle(raw);
-      questions = raw.map(q => {
-        const options = shuffle([...q.options]);
-        return {
-          id: q.id,
-          question: q.question,
-          options
-        };
-      });
-      startTimer();
-      showQuestion();
-    });
-}
-
-function startTimer() {
-  document.getElementById("timer").textContent = `倒计时：${totalTime} 秒`;
-  timerId = setInterval(() => {
-    totalTime--;
-    document.getElementById("timer").textContent = `倒计时：${totalTime} 秒`;
-    if (totalTime <= 0) {
-      clearInterval(timerId);
-      submitAnswers();
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
     }
-  }, 1000);
-}
 
-function showQuestion() {
-  if (current >= questions.length) {
-    submitAnswers();
-    return;
-  }
-  const q = questions[current];
-  document.getElementById("quiz").style.display = "block";
-  document.getElementById("question").textContent = `题目 ${current + 1}：${q.question}`;
-  const opts = document.getElementById("options");
-  opts.innerHTML = "";
-  q.options.forEach((opt) => {
-    const div = document.createElement("div");
-    div.className = "option";
-    div.textContent = opt;
-    div.onclick = () => {
-      userAnswers.push({ id: q.id, answerText: opt });
-      current++;
-      showQuestion();
-    };
-    opts.appendChild(div);
-  });
-}
-
-function submitAnswers() {
-  clearInterval(timerId);
-  // 对于没答完的题自动记录空答案
-  while (userAnswers.length < questions.length) {
-    userAnswers.push({ id: questions[userAnswers.length].id, answerText: null });
-  }
-
-  const timestamp = Math.floor(Date.now() / 1000);
-  const nonce = crypto.randomUUID();
-
-  fetch(`${SERVER}/quiz/submit`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      username,
-      answers: userAnswers,
-      timestamp,
-      nonce,
-      userId: Math.floor(Math.random() * 1e6)
-    })
-  })
-    .then(res => res.json())
-    .then(result => {
-      document.getElementById("quiz").style.display = "none";
-      const resultDiv = document.getElementById("result");
-      if (result.success) {
-        resultDiv.innerHTML =
-          `✅ 答题结束！你的得分：<b>${result.score}/${result.total}</b><br><br>` +
-          `验证签名（供后台或领奖使用）：<br><code>${result.proof}</code>`;
-        loadLeaderboard();
-      } else {
-        resultDiv.textContent = `提交失败：${result.message}`;
+    function startQuiz() {
+      const input = document.getElementById("username");
+      if (!input.value.trim()) {
+        alert("请先输入用户名！");
+        return;
       }
-    })
-    .catch(() => {
-      document.getElementById("quiz").style.display = "none";
-      document.getElementById("result").textContent = "提交失败，请检查网络连接。";
-    });
-}
+      username = input.value.trim();
+      document.getElementById("user-section").style.display = "none";
 
-function loadLeaderboard() {
-  fetch(`${SERVER}/quiz/leaderboard`)
-    .then(res => res.json())
-    .then(data => {
-      if (data.success && Array.isArray(data.leaderboard)) {
-        const board = document.getElementById("leaderboard");
-        const tbody = document.getElementById("leaderboard-body");
-        board.style.display = "block";
-        tbody.innerHTML = "";
-
-        data.leaderboard.forEach((r, i) => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${i + 1}</td>
-            <td>${r.username}</td>
-            <td>${r.score}</td>
-            <td>${new Date(r.submitted_at).toLocaleTimeString('zh-CN', { hour12: false })}</td>
-          `;
-          tbody.appendChild(row);
+      fetch(`${SERVER}/quiz`)
+        .then(res => res.json())
+        .then(data => {
+          const raw = data.questions;
+          shuffle(raw);
+          questions = raw.map(q => {
+            const options = shuffle([...q.options]);
+            return {
+              id: q.id,
+              question: q.question,
+              options
+            };
+          });
+          startTimer();
+          showQuestion();
         });
-      }
-    });
-}
+    }
 
+    function startTimer() {
+      document.getElementById("timer").textContent = `倒计时：${totalTime} 秒`;
+      timerId = setInterval(() => {
+        totalTime--;
+        document.getElementById("timer").textContent = `倒计时：${totalTime} 秒`;
+        if (totalTime <= 0) {
+          clearInterval(timerId);
+          submitAnswers();
+        }
+      }, 1000);
+    }
+
+    function showQuestion() {
+      if (current >= questions.length) {
+        submitAnswers();
+        return;
+      }
+      const q = questions[current];
+      document.getElementById("quiz").style.display = "block";
+      document.getElementById("question").textContent = `题目 ${current + 1}：${q.question}`;
+      const opts = document.getElementById("options");
+      opts.innerHTML = "";
+      q.options.forEach((opt, index) => {
+        const div = document.createElement("div");
+        div.className = "option";
+        div.textContent = opt;
+        div.onclick = () => {
+          userAnswers.push({ id: q.id, answerIndex: index });
+          current++;
+          showQuestion();
+        };
+        opts.appendChild(div);
+      });
+    }
+
+    function submitAnswers() {
+      clearInterval(timerId);
+      while (userAnswers.length < questions.length) {
+        userAnswers.push({ id: questions[userAnswers.length].id, answerIndex: null });
+      }
+
+      const timestamp = Math.floor(Date.now() / 1000);
+      const nonce = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+
+      fetch(`${SERVER}/quiz/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          answers: userAnswers,
+          timestamp,
+          nonce,
+          userId: Math.floor(Math.random() * 1e6)
+        })
+      })
+        .then(res => res.json())
+        .then(result => {
+          document.getElementById("quiz").style.display = "none";
+          const resultDiv = document.getElementById("result");
+          if (result.success) {
+            resultDiv.innerHTML =
+              `✅ 答题结束！你的得分：<b>${result.score}/${result.total}</b><br><br>` +
+              `验证签名（供后台或领奖使用）：<br><code>${result.proof}</code>`;
+            loadLeaderboard();
+          } else {
+            resultDiv.textContent = `提交失败：${result.message}`;
+          }
+        })
+        .catch(() => {
+          document.getElementById("quiz").style.display = "none";
+          document.getElementById("result").textContent = "提交失败，请检查网络连接。";
+        });
+    }
+
+    function loadLeaderboard() {
+      fetch(`${SERVER}/quiz/leaderboard`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && Array.isArray(data.leaderboard)) {
+            const board = document.getElementById("leaderboard");
+            const tbody = document.getElementById("leaderboard-body");
+            board.style.display = "block";
+            tbody.innerHTML = "";
+
+            data.leaderboard.forEach((r, i) => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                <td>${i + 1}</td>
+                <td>${r.username}</td>
+                <td>${r.score}</td>
+                <td>${new Date(r.submitted_at).toLocaleTimeString('zh-CN', { hour12: false })}</td>
+              `;
+              tbody.appendChild(row);
+            });
+          }
+        });
+    }
   </script>
 </body>
 </html>
