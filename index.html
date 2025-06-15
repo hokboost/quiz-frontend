@@ -126,7 +126,7 @@
     function showQuestion(data) {
       const qDiv = document.getElementById("question");
       const opts = document.getElementById("options");
-      qDiv.textContent = `题目 ${currentIndex + 1}：${data.question}`;
+      qDiv.textContent = `题目 ${currentIndex + 1}：${data.question.text}`;
       opts.innerHTML = "";
 
       data.options.forEach((opt, idx) => {
