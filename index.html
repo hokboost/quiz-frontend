@@ -80,6 +80,7 @@
     let questions = [];
     let userAnswers = [];
     let timerId;
+    let totalTime = 30;
     let username = "";
 
     const timestamp = Math.floor(Date.now() / 1000);
@@ -109,17 +110,28 @@
           const raw = data.questions;
           shuffle(raw);
           questions = raw.map(q => {
-            const correctText = q.options[q.answer];
             const options = shuffle([...q.options]);
             return {
               id: q.id,
               question: q.question,
-              options,
-              correct: correctText
+              options
             };
           });
+          startTimer();
           showQuestion();
         });
+    }
+
+    function startTimer() {
+      document.getElementById("timer").textContent = `倒计时：${totalTime} 秒`;
+      timerId = setInterval(() => {
+        totalTime--;
+        document.getElementById("timer").textContent = `倒计时：${totalTime} 秒`;
+        if (totalTime <= 0) {
+          clearInterval(timerId);
+          submitAnswers();
+        }
+      }, 1000);
     }
 
     function showQuestion() {
@@ -137,36 +149,21 @@
         div.className = "option";
         div.textContent = opt;
         div.onclick = () => {
-          clearInterval(timerId);
-          userAnswers.push({ id: q.id, answerText: opt, correctText: q.correct });
+          userAnswers.push({ id: q.id, answerText: opt });
           current++;
           showQuestion();
         };
         opts.appendChild(div);
       });
-      startTimer();
-    }
-
-    function startTimer() {
-      let t = 30;
-      document.getElementById("timer").textContent = `倒计时：${t} 秒`;
-      timerId = setInterval(() => {
-        t--;
-        document.getElementById("timer").textContent = `倒计时：${t} 秒`;
-        if (t <= 0) {
-          clearInterval(timerId);
-          userAnswers.push({
-            id: questions[current].id,
-            answerText: null,
-            correctText: questions[current].correct
-          });
-          current++;
-          showQuestion();
-        }
-      }, 1000);
     }
 
     function submitAnswers() {
+      clearInterval(timerId);
+      // 对于没答完的题自动记录空答案
+      while (userAnswers.length < questions.length) {
+        userAnswers.push({ id: questions[userAnswers.length].id, answerText: null });
+      }
+
       fetch(`${SERVER}/quiz/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
