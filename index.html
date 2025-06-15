@@ -127,23 +127,27 @@
     }
 
     function showQuestion(q) {
-      const qDiv = document.getElementById("question");
-      const opts = document.getElementById("options");
-      qDiv.textContent = `题目 ${currentIndex + 1}：${q.question}`;
-      opts.innerHTML = "";
+  const qDiv = document.getElementById("question");
+  const opts = document.getElementById("options");
+  qDiv.textContent = `题目 ${currentIndex + 1}：${q.question}`;
+  opts.innerHTML = "";
 
-      q.options.forEach((opt, idx) => {
-        const div = document.createElement("div");
-        div.className = "option";
-        div.textContent = opt;
-        div.onclick = () => {
-          answers.push({ token, answerIndex: idx });
-          currentIndex++;
-          loadNext();
-        };
-        opts.appendChild(div);
-      });
-    }
+  q.options.forEach((opt, idx) => {
+    const div = document.createElement("div");
+    div.className = "option";
+    div.textContent = opt;
+    div.onclick = () => {
+      // 👇 点击后禁用所有选项
+      Array.from(document.getElementsByClassName("option")).forEach(e => e.onclick = null);
+      
+      answers.push({ token, answerIndex: idx });
+      currentIndex++;
+      loadNext();
+    };
+    opts.appendChild(div);
+  });
+}
+
 
     async function submitQuiz() {
       clearInterval(timerId);
