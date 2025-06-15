@@ -126,7 +126,10 @@
       showQuestion(data.question);
     }
 
-    function showQuestion(q) {
+    let lock = false;
+
+function showQuestion(q) {
+  lock = false;
   const qDiv = document.getElementById("question");
   const opts = document.getElementById("options");
   qDiv.textContent = `题目 ${currentIndex + 1}：${q.question}`;
@@ -137,9 +140,15 @@
     div.className = "option";
     div.textContent = opt;
     div.onclick = () => {
-      // 👇 点击后禁用所有选项
-      Array.from(document.getElementsByClassName("option")).forEach(e => e.onclick = null);
-      
+      if (lock) return;  // 防止重复点击
+      lock = true;
+
+      // 禁止所有选项
+      Array.from(document.getElementsByClassName("option")).forEach(el => {
+        el.onclick = null;
+        el.style.pointerEvents = "none";
+      });
+
       answers.push({ token, answerIndex: idx });
       currentIndex++;
       loadNext();
@@ -147,6 +156,7 @@
     opts.appendChild(div);
   });
 }
+
 
 
     async function submitQuiz() {
