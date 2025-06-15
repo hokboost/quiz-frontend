@@ -75,132 +75,138 @@
   </div>
 
   <script>
-    const SERVER = "https://quiz-server-xbm0.onrender.com";
-    let token = null;
-    let username = "";
-    let currentIndex = 0;
-    let totalQuestions = 15;
-    let answers = [];
-    let timerId;
-    let timeLeft = 30;
-    let seenIds = [];
+  const SERVER = "https://quiz-server-xbm0.onrender.com";
+  let username = "";
+  let currentIndex = 0;
+  let totalQuestions = 15;
+  let answers = [];
+  let timerId;
+  let timeLeft = 30;
+  let seenIds = [];
+  let lock = false;
 
-    async function startQuiz() {
-      username = document.getElementById("username").value.trim();
-      if (!username) return alert("请输入用户名！");
+  async function startQuiz() {
+    username = document.getElementById("username").value.trim();
+    if (!username) return alert("请输入用户名！");
 
-      document.getElementById("user-section").style.display = "none";
-      document.getElementById("quiz").style.display = "block";
-      answers = [];
-      currentIndex = 0;
-      timeLeft = 30;
-      seenIds = [];
-      startTimer();
-      await loadNext();
-    }
+    document.getElementById("user-section").style.display = "none";
+    document.getElementById("quiz").style.display = "block";
+    answers = [];
+    currentIndex = 0;
+    timeLeft = 30;
+    seenIds = [];
+    startTimer();
+    await loadNext();
+  }
 
-    function startTimer() {
+  function startTimer() {
+    document.getElementById("timer").textContent = `倒计时：${timeLeft} 秒`;
+    timerId = setInterval(() => {
+      timeLeft--;
       document.getElementById("timer").textContent = `倒计时：${timeLeft} 秒`;
-      timerId = setInterval(() => {
-        timeLeft--;
-        document.getElementById("timer").textContent = `倒计时：${timeLeft} 秒`;
-        if (timeLeft <= 0) {
-          clearInterval(timerId);
-          submitQuiz();
-        }
-      }, 1000);
-    }
-
-    async function loadNext() {
-      if (currentIndex >= totalQuestions) return submitQuiz();
-      const res = await fetch(`${SERVER}/quiz/next`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seen: seenIds })
-      });
-      const data = await res.json();
-      if (!data.success || !data.question) return submitQuiz();
-
-      token = data.token;
-      seenIds.push(data.question.id);
-      showQuestion(data.question);
-    }
-
-    let lock = false;
-
-function showQuestion(q) {
-  lock = false;
-  const qDiv = document.getElementById("question");
-  const opts = document.getElementById("options");
-  qDiv.textContent = `题目 ${currentIndex + 1}：${q.question}`;
-  opts.innerHTML = "";
-
-  q.options.forEach((opt, idx) => {
-    const div = document.createElement("div");
-    div.className = "option";
-    div.textContent = opt;
-    div.onclick = () => {
-      if (lock) return;  // 防止重复点击
-      lock = true;
-
-      // 禁止所有选项
-      Array.from(document.getElementsByClassName("option")).forEach(el => {
-        el.onclick = null;
-        el.style.pointerEvents = "none";
-      });
-
-      answers.push({ token, answerIndex: idx });
-      currentIndex++;
-      loadNext();
-    };
-    opts.appendChild(div);
-  });
-}
-
-
-
-    async function submitQuiz() {
-      clearInterval(timerId);
-      const timestamp = Math.floor(Date.now() / 1000);
-      const nonce = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
-
-      const res = await fetch(`${SERVER}/quiz/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, answers, timestamp, nonce })
-      });
-
-      const result = await res.json();
-      document.getElementById("quiz").style.display = "none";
-      const resultDiv = document.getElementById("result");
-
-      if (result.success) {
-        resultDiv.innerHTML = `✅ 答题结束！得分：<b>${result.score}/${result.total}</b><br>签名：<code>${result.proof}</code>`;
-        loadLeaderboard();
-      } else {
-        resultDiv.textContent = "提交失败：" + result.message;
+      if (timeLeft <= 0) {
+        clearInterval(timerId);
+        submitQuiz();
       }
-    }
+    }, 1000);
+  }
 
-    function loadLeaderboard() {
-      fetch(`${SERVER}/quiz/leaderboard`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && Array.isArray(data.leaderboard)) {
-            const board = document.getElementById("leaderboard");
-            const tbody = document.getElementById("leaderboard-body");
-            board.style.display = "block";
-            tbody.innerHTML = "";
+  let currentToken = null;
+  let currentSignature = null;
 
-            data.leaderboard.forEach((r, i) => {
-              const row = document.createElement("tr");
-              row.innerHTML = `<td>${i + 1}</td><td>${r.username}</td><td>${r.score}</td><td>${new Date(r.submitted_at).toLocaleTimeString('zh-CN', { hour12: false })}</td>`;
-              tbody.appendChild(row);
-            });
-          }
+  async function loadNext() {
+    if (currentIndex >= totalQuestions) return submitQuiz();
+    const res = await fetch(`${SERVER}/quiz/next`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seen: seenIds })
+    });
+    const data = await res.json();
+    if (!data.success || !data.question) return submitQuiz();
+
+    currentToken = data.token;
+    currentSignature = data.signature;
+    seenIds.push(data.question.id);
+    showQuestion(data.question);
+  }
+
+  function showQuestion(q) {
+    lock = false;
+    const qDiv = document.getElementById("question");
+    const opts = document.getElementById("options");
+    qDiv.textContent = `题目 ${currentIndex + 1}：${q.question}`;
+    opts.innerHTML = "";
+
+    q.options.forEach((opt, idx) => {
+      const div = document.createElement("div");
+      div.className = "option";
+      div.textContent = opt;
+      div.onclick = () => {
+        if (lock) return;
+        lock = true;
+
+        Array.from(document.getElementsByClassName("option")).forEach(el => {
+          el.onclick = null;
+          el.style.pointerEvents = "none";
         });
+
+        // ✅ 添加 signature
+        answers.push({
+          token: currentToken,
+          signature: currentSignature,
+          answerIndex: idx
+        });
+
+        currentIndex++;
+        loadNext();
+      };
+      opts.appendChild(div);
+    });
+  }
+
+  async function submitQuiz() {
+    clearInterval(timerId);
+    const timestamp = Math.floor(Date.now() / 1000);
+    const nonce = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+
+    const res = await fetch(`${SERVER}/quiz/submit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, answers, timestamp, nonce })
+    });
+
+    const result = await res.json();
+    document.getElementById("quiz").style.display = "none";
+    const resultDiv = document.getElementById("result");
+
+    if (result.success) {
+      resultDiv.innerHTML = `✅ 答题结束！得分：<b>${result.score}/${result.total}</b><br>签名：<code>${result.proof}</code>`;
+      loadLeaderboard();
+    } else {
+      resultDiv.textContent = "提交失败：" + result.message;
     }
-  </script>
+  }
+
+  function loadLeaderboard() {
+    fetch(`${SERVER}/quiz/leaderboard`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.leaderboard)) {
+          const board = document.getElementById("leaderboard");
+          const tbody = document.getElementById("leaderboard-body");
+          board.style.display = "block";
+          tbody.innerHTML = "";
+
+          data.leaderboard.forEach((r, i) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `<td>${i + 1}</td><td>${r.username}</td><td>${r.score}</td><td>${new Date(r.submitted_at).toLocaleTimeString('zh-CN', { hour12: false })}</td>`;
+            tbody.appendChild(row);
+          });
+        }
+      });
+  }
+</script>
+
 </body>
 </html>
 
