@@ -83,6 +83,7 @@
     let answers = [];
     let timerId;
     let timeLeft = 30;
+    let seenIds = [];
 
     async function startQuiz() {
       username = document.getElementById("username").value.trim();
@@ -93,6 +94,7 @@
       answers = [];
       currentIndex = 0;
       timeLeft = 30;
+      seenIds = [];
       startTimer();
       await loadNext();
     }
@@ -114,22 +116,23 @@
       const res = await fetch(`${SERVER}/quiz/next`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, index: currentIndex })
+        body: JSON.stringify({ seen: seenIds })
       });
       const data = await res.json();
-      if (!data.success) return alert("加载失败: " + data.message);
+      if (!data.success || !data.question) return submitQuiz();
 
       token = data.token;
-      showQuestion(data);
+      seenIds.push(data.question.id);
+      showQuestion(data.question);
     }
 
-    function showQuestion(data) {
+    function showQuestion(q) {
       const qDiv = document.getElementById("question");
       const opts = document.getElementById("options");
-      qDiv.textContent = `题目 ${currentIndex + 1}：${data.question.text}`;
+      qDiv.textContent = `题目 ${currentIndex + 1}：${q.question}`;
       opts.innerHTML = "";
 
-      data.options.forEach((opt, idx) => {
+      q.options.forEach((opt, idx) => {
         const div = document.createElement("div");
         div.className = "option";
         div.textContent = opt;
@@ -186,5 +189,6 @@
   </script>
 </body>
 </html>
+
 
 
